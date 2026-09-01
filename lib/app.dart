@@ -8,7 +8,7 @@ class BugHunterPixelApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: '버그헌터 픽셀',
+      title: '버그헌터',
       theme: ThemeData(
         useMaterial3: true,
         scaffoldBackgroundColor: const Color(0xfff2ead8),
@@ -51,7 +51,7 @@ class HomeScreen extends StatelessWidget {
                         width: 112,
                         height: 112,
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: const Color(0xff182431), width: 4),
                           boxShadow: const [
                             BoxShadow(
@@ -70,7 +70,7 @@ class HomeScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 22),
                     const Text(
-                      '버그헌터 픽셀',
+                      '버그헌터',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 38,
@@ -96,7 +96,7 @@ class HomeScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: const Color(0xfffff9eb),
                         border: Border.all(color: const Color(0xff182431), width: 3),
-                        borderRadius: BorderRadius.circular(18),
+                        borderRadius: BorderRadius.circular(10),
                         boxShadow: const [
                           BoxShadow(
                             color: Color(0x22000000),
@@ -131,7 +131,7 @@ class HomeScreen extends StatelessWidget {
                           foregroundColor: const Color(0xff182431),
                           elevation: 0,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(8),
                             side: const BorderSide(color: Color(0xff182431), width: 3),
                           ),
                         ),

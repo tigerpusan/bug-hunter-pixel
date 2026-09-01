@@ -3,45 +3,47 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>버그헌터 픽셀</title>
+<title>버그헌터</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;overflow:hidden;font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;touch-action:none;background:#8fdcff}
-#game{position:relative;height:100%;overflow:hidden;background:url('../game_art/backgrounds/game_bg_day.png') center/cover no-repeat}
-#game:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,0) 32%,rgba(22,77,18,.06) 100%)}
-#hud{position:absolute;left:10px;right:10px;top:10px;display:grid;grid-template-columns:1.45fr 1fr 1fr .95fr;gap:7px;z-index:50}
-.hudCell{min-height:58px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(28,77,113,.94),rgba(21,58,85,.96));border:2px solid rgba(255,255,255,.20);border-radius:18px;color:#fff;box-shadow:0 10px 18px rgba(8,40,55,.18)}
-.hudStat{flex-direction:column;padding:8px 8px 6px;gap:2px;overflow:hidden}
-.hudStat .label{font-size:10px;font-weight:1000;letter-spacing:.8px;color:#caebff}
-.hudStat .value{font-size:clamp(15px,3.9vw,24px);font-weight:1000;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#scoreWrap .value{font-size:clamp(18px,4.6vw,30px)}
-#timeWrap .value{color:#ffe56b}
-#banner{position:absolute;left:50%;top:82px;transform:translateX(-50%);z-index:46;background:#ffef99;color:#614e00;padding:10px 18px;border-radius:999px;font-weight:1000;font-size:16px;box-shadow:0 10px 16px rgba(115,91,0,.18)}
-#message{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:45;min-width:255px;max-width:88%;padding:12px 18px;text-align:center;background:rgba(17,81,114,.92);border:2px solid rgba(255,255,255,.16);border-radius:22px;color:#fff;box-shadow:0 10px 18px rgba(7,36,52,.18);font-size:14px;font-weight:900}
-#cross{position:absolute;z-index:42;width:58px;height:58px;border:4px solid #ff6255;border-radius:50%;transform:translate(-50%,-50%);pointer-events:none;box-shadow:0 0 0 5px rgba(255,255,255,.18)}
-#cross:before,#cross:after{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#ff6255}
-#cross:before{width:80px;height:4px}#cross:after{width:4px;height:80px}
-#cross .dot{position:absolute;left:50%;top:50%;width:9px;height:9px;transform:translate(-50%,-50%);border-radius:50%;background:#ff6255}
-#rifleWrap{--ang:0deg;--weapon-x:50%;--weapon-bottom:-24px;--weapon-width:126px;position:absolute;left:var(--weapon-x);bottom:var(--weapon-bottom);width:var(--weapon-width);height:214px;transform:translateX(-50%) rotate(var(--ang));transform-origin:50% 100%;pointer-events:none;z-index:40;filter:drop-shadow(0 10px 14px rgba(0,0,0,.22))}
-#rifleImg{position:absolute;left:0;bottom:0;width:100%;height:auto}
-#rifleWrap.kick{animation:kick .11s ease-out}
-@keyframes kick{0%,100%{transform:translateX(-50%) rotate(var(--ang))}50%{transform:translateX(-50%) translateY(6px) rotate(calc(var(--ang) + 1.2deg))}}
-#muzzleFlash{position:absolute;left:50%;top:0;width:44px;height:44px;transform:translateX(-50%) scale(.52);border-radius:50%;background:radial-gradient(circle,#fffcc0 0%,#ffd65b 32%,rgba(255,211,87,.34) 56%,rgba(255,197,62,0) 76%);opacity:0}
-#rifleWrap.fire #muzzleFlash{animation:flash .11s ease-out}
-@keyframes flash{0%{opacity:0;transform:translateX(-50%) scale(.5)}30%{opacity:1;transform:translateX(-50%) scale(1)}100%{opacity:0;transform:translateX(-50%) scale(1.35)}}
-.pest{position:absolute;z-index:34;transform:translate(-50%,-50%);filter:drop-shadow(0 7px 8px rgba(0,0,0,.18))}
-.pest img.sprite{display:block;width:100%;height:auto;pointer-events:none;user-select:none}
-.pest .no{position:absolute;left:50%;top:56%;transform:translate(-50%,-50%);min-width:21px;height:21px;padding:0 4px;border-radius:50%;background:#fff;border:2px solid #ff6b54;color:#173650;font-size:12px;line-height:17px;font-weight:1000;text-align:center;box-shadow:0 3px 8px rgba(0,0,0,.14)}
-.pest.mosquito .no{top:48%}.pest.moth .no{top:50%}
-.hitFx{position:absolute;width:24px;height:24px;border-radius:50%;border:3px solid #fff0a8;box-shadow:0 0 0 10px rgba(255,240,168,.18);transform:translate(-50%,-50%);pointer-events:none;z-index:70;animation:hitBurst .22s ease-out forwards}
-@keyframes hitBurst{0%{opacity:1;transform:translate(-50%,-50%) scale(.4)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.5)}}
-.hitText{position:absolute;transform:translate(-50%,-50%);font-weight:1000;font-size:15px;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.3);pointer-events:none;z-index:72;animation:floatText .56s ease-out forwards}
+html,body{margin:0;height:100%;overflow:hidden;font-family:ui-monospace,"SFMono-Regular",Consolas,"Noto Sans KR",monospace;touch-action:none;background:#1b211d;image-rendering:pixelated}
+#game{position:relative;height:100%;overflow:hidden;background:url('../game_art/backgrounds/game_bg_day.png') center/cover no-repeat;image-rendering:pixelated}
+#game:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.06),rgba(0,0,0,0) 46%,rgba(0,0,0,.12) 100%);pointer-events:none}
+#game:after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.018) 0 1px,rgba(0,0,0,.018) 1px 2px);mix-blend-mode:overlay;pointer-events:none;z-index:2}
+#hud{position:absolute;left:8px;right:8px;top:8px;display:grid;grid-template-columns:1.45fr 1fr 1fr .95fr;gap:5px;z-index:50}
+.hudCell{min-height:58px;display:flex;align-items:center;justify-content:center;background:#172018;border:3px solid #0a0d0b;outline:2px solid #6f765f;color:#fff;box-shadow:4px 5px 0 rgba(0,0,0,.38)}
+.hudStat{flex-direction:column;padding:7px 5px 5px;gap:1px;overflow:hidden}
+.hudStat .label{font-size:10px;font-weight:1000;letter-spacing:1px;color:#c9c8a0;text-shadow:2px 2px 0 #000}
+.hudStat .value{font-size:clamp(15px,3.9vw,23px);font-weight:1000;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:2px 2px 0 #000}
+#scoreWrap .value{font-size:clamp(18px,4.6vw,29px);color:#ffd24a}
+#timeWrap .value{color:#fff074}
+#missWrap .value{color:#ff6658;letter-spacing:1px}
+#banner{position:absolute;left:50%;top:80px;transform:translateX(-50%);z-index:46;background:#f2d45c;color:#211d0e;padding:8px 14px;border:3px solid #211d0e;box-shadow:4px 4px 0 rgba(0,0,0,.32);font-weight:1000;font-size:14px;white-space:nowrap}
+#message{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:45;min-width:230px;max-width:86%;padding:10px 14px;text-align:center;background:#172018;border:3px solid #0a0d0b;outline:2px solid #6f765f;color:#fff;box-shadow:4px 4px 0 rgba(0,0,0,.38);font-size:13px;font-weight:1000;text-shadow:2px 2px 0 #000}
+#cross{position:absolute;z-index:42;width:50px;height:50px;border:4px solid #f34e3d;transform:translate(-50%,-50%);pointer-events:none;filter:drop-shadow(2px 2px 0 #151515)}
+#cross:before,#cross:after{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#f34e3d}
+#cross:before{width:72px;height:4px}#cross:after{width:4px;height:72px}
+#cross .dot{position:absolute;left:50%;top:50%;width:8px;height:8px;transform:translate(-50%,-50%);background:#fff;border:2px solid #f34e3d}
+#rifleWrap{--ang:0deg;--weapon-x:50%;--weapon-bottom:-24px;--weapon-width:126px;position:absolute;left:var(--weapon-x);bottom:var(--weapon-bottom);width:var(--weapon-width);height:224px;transform:translateX(-50%) rotate(var(--ang));transform-origin:50% 100%;pointer-events:none;z-index:40;filter:drop-shadow(4px 7px 0 rgba(0,0,0,.38));image-rendering:pixelated}
+#rifleImg{position:absolute;left:0;bottom:0;width:100%;height:auto;image-rendering:pixelated}
+#rifleWrap.kick{animation:kick .10s steps(2,end)}
+@keyframes kick{0%,100%{transform:translateX(-50%) rotate(var(--ang))}50%{transform:translateX(-50%) translateY(7px) rotate(calc(var(--ang) + 1deg))}}
+#muzzleFlash{position:absolute;left:50%;top:1px;width:44px;height:44px;transform:translateX(-50%) scale(.55);opacity:0;clip-path:polygon(50% 0,62% 31%,100% 18%,70% 50%,100% 76%,62% 68%,50% 100%,38% 68%,0 80%,29% 50%,0 20%,38% 31%);background:#ffd12e;box-shadow:inset 0 0 0 7px #fff4a1}
+#rifleWrap.fire #muzzleFlash{animation:flash .11s steps(2,end)}
+@keyframes flash{0%{opacity:0;transform:translateX(-50%) scale(.5)}35%{opacity:1;transform:translateX(-50%) scale(1)}100%{opacity:0;transform:translateX(-50%) scale(1.25)}}
+.pest{position:absolute;z-index:34;transform:translate(-50%,-50%);filter:drop-shadow(3px 4px 0 rgba(0,0,0,.42));image-rendering:pixelated}
+.pest img.sprite{display:block;width:100%;height:auto;pointer-events:none;user-select:none;image-rendering:pixelated}
+.pest .no{position:absolute;left:50%;top:58%;transform:translate(-50%,-50%);min-width:22px;height:22px;padding:0 3px;background:#f5ead1;border:3px solid #251e16;color:#171512;font-size:12px;line-height:16px;font-weight:1000;text-align:center;box-shadow:2px 2px 0 rgba(0,0,0,.35)}
+.pest.mosquito .no{top:50%}.pest.moth .no{top:52%}
+.hitFx{position:absolute;width:32px;height:32px;transform:translate(-50%,-50%);pointer-events:none;z-index:70;background:#ffcf33;clip-path:polygon(50% 0,62% 33%,100% 17%,70% 50%,100% 83%,62% 67%,50% 100%,38% 67%,0 83%,30% 50%,0 17%,38% 33%);box-shadow:inset 0 0 0 7px #fff3a8;animation:hitBurst .22s steps(3,end) forwards}
+@keyframes hitBurst{0%{opacity:1;transform:translate(-50%,-50%) scale(.45)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.45)}}
+.hitText{position:absolute;transform:translate(-50%,-50%);font-weight:1000;font-size:18px;color:#ffd84a;text-shadow:3px 3px 0 #000;pointer-events:none;z-index:72;animation:floatText .52s steps(5,end) forwards}
 @keyframes floatText{0%{opacity:0;transform:translate(-50%,-35%) scale(.8)}20%{opacity:1}100%{opacity:0;transform:translate(-50%,-115%) scale(1.08)}}
-#overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(5,20,31,.34);z-index:100}
-#overlay .card{width:min(92vw,360px);padding:24px 20px;background:linear-gradient(180deg,rgba(10,42,66,.98),rgba(8,29,47,.98));border:2px solid rgba(255,255,255,.16);border-radius:28px;text-align:center;color:#fff;box-shadow:0 16px 28px rgba(2,14,22,.34)}
-#overlay .card.fail{background:linear-gradient(180deg,rgba(73,19,22,.97),rgba(44,8,11,.98))}
-#ovIcon{font-size:38px;margin-bottom:6px}#ovTitle{margin:0 0 10px;font-size:30px;font-weight:1000}#ovText{margin:0;font-size:15px;line-height:1.55;color:#d9ecff;white-space:pre-line}.card.fail #ovText{color:#ffd9d9}
-.actions{display:flex;gap:10px;justify-content:center;margin-top:18px}.actions button{border:0;border-radius:16px;padding:13px 16px;font-weight:1000;font-size:15px}.actions .primary{background:#ffd43d;color:#172028}.actions .secondary{background:rgba(255,255,255,.10);color:#fff;border:1px solid rgba(255,255,255,.16)}
+#overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(8,10,8,.64);z-index:100}
+#overlay .card{width:min(92vw,350px);padding:22px 18px;background:#171b18;border:4px solid #080a08;outline:3px solid #6f765f;text-align:center;color:#fff;box-shadow:8px 8px 0 rgba(0,0,0,.42)}
+#overlay .card.fail{background:#211515;outline-color:#8f4a3f}
+#ovIcon{font-size:34px;margin-bottom:5px}#ovTitle{margin:0 0 10px;font-size:30px;font-weight:1000;color:#ffd449;text-shadow:3px 3px 0 #000}#ovText{margin:0;font-size:14px;line-height:1.55;color:#e8e1c9;white-space:pre-line}.card.fail #ovTitle{color:#ff5c46}.card.fail #ovText{color:#ffd6cf}
+.actions{display:flex;gap:10px;justify-content:center;margin-top:18px}.actions button{border:3px solid #111;padding:12px 14px;font-weight:1000;font-size:14px;box-shadow:3px 3px 0 rgba(0,0,0,.38)}.actions .primary{background:#f0c532;color:#17140b}.actions .secondary{background:#3c4d3b;color:#fff;border-color:#161b15}
 </style>
 </head>
 <body>
@@ -59,7 +61,7 @@ html,body{margin:0;height:100%;overflow:hidden;font-family:system-ui,-apple-syst
   <div id="overlay"><div class="card" id="ovCard"><div id="ovIcon">⭐</div><h2 id="ovTitle">박멸 성공!</h2><p id="ovText">다음 해충 떼가 감지되었습니다.</p><div class="actions"><button class="primary" id="retryBtn">다음 단계</button><button class="secondary" id="resetBtn">처음부터</button></div></div></div>
 </div>
 <script>
-// V1.1.0 PIXEL FOUNDATION: gameplay values and art geometry are separated here.
+// V1.2.0 PIXEL ART: gameplay rules remain locked; visual layer is pixel-art reskinned.
 // Pixel assets can be replaced later without changing hit difficulty or weapon aim behavior.
 const GAME_CONFIG={
   stagesPerAct:10,
@@ -68,9 +70,9 @@ const GAME_CONFIG={
   playArea:{sidePadding:32,minTop:128,hudGap:26,bannerGap:20,maxHeightRatio:.60,weaponReserve:238,minHeight:80},
   weapon:{anchorX:'50%',bottom:-24,width:126,minAimDy:155,angleFactor:.42},
   pests:{
-    fly:{sprite:'../game_art/pests/fly.png',spriteWidth:48,hitRadius:30},
-    mosquito:{sprite:'../game_art/pests/mosquito.png',spriteWidth:50,hitRadius:24},
-    moth:{sprite:'../game_art/pests/moth.png',spriteWidth:58,hitRadius:38}
+    fly:{sprite:'../game_art/pests/fly.png',spriteWidth:56,hitRadius:30},
+    mosquito:{sprite:'../game_art/pests/mosquito.png',spriteWidth:56,hitRadius:24},
+    moth:{sprite:'../game_art/pests/moth.png',spriteWidth:64,hitRadius:38}
   }
 };
 const ACTS=[{name:'파리',key:'fly',color:'#ff8d76'},{name:'모기',key:'mosquito',color:'#5bc8ff'},{name:'나방',key:'moth',color:'#ffd36f'},{name:'혼합',key:'mixed',color:'#69d77f'}];
@@ -123,12 +125,12 @@ function pestHtml(type,no){ return '<img class="sprite" src="'+SPRITES[type]+'" 
 function createPestType(meta, idx){ if(meta.act.key!=='mixed') return meta.act.key; if(meta.level<=3) return idx%2===0?'fly':'mosquito'; if(meta.level<=6) return ['fly','mosquito','moth'][idx%3]; return ['mosquito','fly','moth'][Math.floor(Math.random()*3)]; }
 function motionProfile(type, level){ if(type==='mosquito') return {speed:230+level*20, turn:5.2+level*0.23, wiggle:24+level*1.6, bob:10+level*0.5, jitter:56+level*3.2}; if(type==='moth') return {speed:120+level*9, turn:2.1+level*0.06, wiggle:16+level*.6, bob:15+level*.7, jitter:12+level*.35}; return {speed:160+level*12, turn:3.5+level*0.11, wiggle:20+level*1.05, bob:17+level*.88, jitter:18+level*.8}; }
 function spawnStage(){ pests.forEach(p=>p.el.remove()); pests=[]; misses=0; overlay.style.display='none'; transitioning=false; running=true; updateHud(); const meta=actOf(wave); const count=stageCount(meta.level); const r=bounds(); const area=playArea(); for(let i=0;i<count;i++){ const type=createPestType(meta,i); const el=document.createElement('div'); el.className='pest '+type; el.style.width=GAME_CONFIG.pests[type].spriteWidth+'px'; el.innerHTML=pestHtml(type,i+1); game.appendChild(el); const prof=motionProfile(type, meta.level); const angle=Math.random()*Math.PI*2; pests.push({el, alive:true, no:i+1, type, x:42+Math.random()*(r.width-84), y:area.yMin+Math.random()*(area.yMax-area.yMin), angle, targetAngle:angle, speed:prof.speed*(0.92+Math.random()*0.18), turnRate:prof.turn, wiggle:prof.wiggle, bob:prof.bob, jitter:prof.jitter, phase:Math.random()*Math.PI*2, changeIn:type==='mosquito' ? (.10+Math.random()*.12) : (.30+Math.random()*.44)}); }
-  showBanner(meta.act.name+(count>1?' '+count+'마리 출현!':' 1마리 출현!')); setMessage('1번부터 차례대로 박멸하세요'); startTimer(); if(!sessionStarted){ sessionStarted=true; ensureAudio(); }}
-function openResult(success,message){ transitioning=true; running=false; stopTimer(); overlay.style.display='flex'; if(success){ ovCard.classList.remove('fail'); ovIcon.textContent='⭐'; ovTitle.textContent='박멸 성공!'; ovText.textContent=message; retryBtn.textContent='다음 단계'; resetBtn.textContent='처음부터'; } else { ovCard.classList.add('fail'); ovIcon.textContent='💥'; ovTitle.textContent='박멸 실패'; ovText.textContent=message; retryBtn.textContent='다시 도전'; resetBtn.textContent='처음부터'; } }
+  showBanner(meta.act.name+(count>1?' '+count+'마리 출현!':' 1마리 출현!')); setMessage('1번부터 맞히세요'); startTimer(); if(!sessionStarted){ sessionStarted=true; ensureAudio(); }}
+function openResult(success,message){ transitioning=true; running=false; stopTimer(); overlay.style.display='flex'; if(success){ ovCard.classList.remove('fail'); ovIcon.textContent='⭐'; ovTitle.textContent='박멸 성공!'; ovText.textContent=message; retryBtn.textContent='다음 단계'; resetBtn.textContent='처음부터'; } else { ovCard.classList.add('fail'); ovIcon.textContent='💥'; ovTitle.textContent='GAME OVER'; ovText.textContent=message; retryBtn.textContent='다시 하기'; resetBtn.textContent='처음부터'; } }
 function nextStage(){ rememberProgress(); if(wave<TOTAL_STAGES){ wave++; spawnStage(); } else { playWaveClear(); openResult(true,'모든 해충을 박멸했습니다!'); } }
-function failStage(reason){ playFail(); rememberProgress(); const retryWave=Math.max(1,wave-2); overlay.dataset.retryWave=String(retryWave); openResult(false, reason+'\n미션을 실패했습니다.'); }
+function failStage(reason){ playFail(); rememberProgress(); const retryWave=Math.max(1,wave-2); overlay.dataset.retryWave=String(retryWave); openResult(false, reason+'\n게임이 끝났습니다.'); }
 function fireFx(x,y,text,kind='hit'){ const flash=document.createElement('div'); flash.className='hitFx'; flash.style.left=x+'px'; flash.style.top=y+'px'; game.appendChild(flash); setTimeout(()=>flash.remove(),220); const t=document.createElement('div'); t.className='hitText'; t.style.left=x+'px'; t.style.top=y+'px'; t.textContent=text; game.appendChild(t); setTimeout(()=>t.remove(),560); rifle.classList.remove('kick','fire'); void rifle.offsetWidth; rifle.classList.add('kick','fire'); setTimeout(()=>rifle.classList.remove('fire'),130); if(kind==='hit') playHit(); else playMiss(); }
-function shoot(x,y){ ensureAudio(); playShot(); aimAt(x,y); if(transitioning||!running) return; const nearest=pests.filter(p=>p.alive).map(p=>({p,d:Math.hypot(p.x-x,p.y-y)})).sort((a,b)=>a.d-b.d)[0]; const hitRadius = nearest ? GAME_CONFIG.pests[nearest.p.type].hitRadius : GAME_CONFIG.pests.fly.hitRadius; if(nearest&&nearest.d<hitRadius){ const need=expectedNo(); if(nearest.p.no!==need){ misses++; updateHud(); setMessage(need+'번을 먼저 맞혀야 합니다'); fireFx(x,y,'MISS','miss'); if(misses>=GAME_CONFIG.missLimit) failStage('번호 순서를 놓쳤어요.'); return; } nearest.p.alive=false; nearest.p.el.remove(); score += 100 * actOf(wave).level + (actOf(wave).index*100); recordKill(); updateHud(); setMessage('좋아요! 다음 번호를 노려보세요'); fireFx(nearest.p.x,nearest.p.y,'HIT!','hit'); if(pests.every(p=>!p.alive)){ playWaveClear(); setTimeout(nextStage,360); } } else { misses++; updateHud(); setMessage('조준을 조금 더 정확히 맞춰보세요'); fireFx(x,y,'MISS','miss'); if(misses>=GAME_CONFIG.missLimit) failStage('MISS가 3회 누적되었어요.'); } }
+function shoot(x,y){ ensureAudio(); playShot(); aimAt(x,y); if(transitioning||!running) return; const nearest=pests.filter(p=>p.alive).map(p=>({p,d:Math.hypot(p.x-x,p.y-y)})).sort((a,b)=>a.d-b.d)[0]; const hitRadius = nearest ? GAME_CONFIG.pests[nearest.p.type].hitRadius : GAME_CONFIG.pests.fly.hitRadius; if(nearest&&nearest.d<hitRadius){ const need=expectedNo(); if(nearest.p.no!==need){ misses++; updateHud(); setMessage(need+'번을 먼저 맞히세요'); fireFx(x,y,'MISS','miss'); if(misses>=GAME_CONFIG.missLimit) failStage('번호 순서를 놓쳤어요.'); return; } nearest.p.alive=false; nearest.p.el.remove(); score += 100 * actOf(wave).level + (actOf(wave).index*100); recordKill(); updateHud(); setMessage('다음 번호를 노리세요'); fireFx(nearest.p.x,nearest.p.y,'HIT!','hit'); if(pests.every(p=>!p.alive)){ playWaveClear(); setTimeout(nextStage,360); } } else { misses++; updateHud(); setMessage('MISS'); fireFx(x,y,'MISS','miss'); if(misses>=GAME_CONFIG.missLimit) failStage('MISS가 3회 누적되었어요.'); } }
 function aimAt(x,y){ const area=playArea(); x=Math.max(area.xMin,Math.min(area.xMax,x)); y=Math.max(area.yMin,Math.min(area.yMax,y)); cross.style.left=x+'px'; cross.style.top=y+'px'; const r=bounds(); const w=GAME_CONFIG.weapon; const dx=x-r.width/2; const dy=Math.max(w.minAimDy,r.height-y); const ang=(Math.atan2(dx,dy)*180/Math.PI)*w.angleFactor; rifle.style.setProperty('--ang',ang+'deg'); }
 function loop(now){ const dt=Math.min(.03,(now-last)/1000); last=now; if(running){ const area=playArea(); pests.filter(p=>p.alive).forEach(p=>{ p.phase += dt*(4.8 + p.turnRate*.65); p.changeIn -= dt; if(p.changeIn<=0){ p.targetAngle += (Math.random()*2-1)*(0.86 + p.turnRate*.16); p.changeIn = p.type==='mosquito' ? (0.07 + Math.random()*.11) : (0.20 + Math.random()*.34); }
       let diff=((p.targetAngle-p.angle+Math.PI*3)%(Math.PI*2))-Math.PI;
