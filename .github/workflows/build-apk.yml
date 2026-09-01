@@ -1,0 +1,60 @@
+name: Build BUG HUNTER PIXEL APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Create isolated Android project
+        run: flutter create . --platforms=android --org com.bughunterpixel --project-name bug_hunter_pixel
+
+      - name: Apply independent app name and new icon
+        run: |
+          sed -i 's/android:label="bug_hunter_pixel"/android:label="버그헌터 픽셀"/' android/app/src/main/AndroidManifest.xml
+          cp assets/android_icons/mipmap-mdpi/ic_launcher.png android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          cp assets/android_icons/mipmap-hdpi/ic_launcher.png android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          cp assets/android_icons/mipmap-xhdpi/ic_launcher.png android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          cp assets/android_icons/mipmap-xxhdpi/ic_launcher.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          cp assets/android_icons/mipmap-xxxhdpi/ic_launcher.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Remove generated sample test
+        run: rm -f test/widget_test.dart
+
+      - name: Run basic app test
+        run: flutter test test/basic_app_test.dart
+
+      - name: Build release APK
+        run: flutter build apk --release
+
+      - name: Rename APK
+        run: cp build/app/outputs/flutter-apk/app-release.apk BUG_HUNTER_PIXEL_V1.1.0_PIXEL_FOUNDATION.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: BUG_HUNTER_PIXEL_V1.1.0_PIXEL_FOUNDATION-apk
+          path: BUG_HUNTER_PIXEL_V1.1.0_PIXEL_FOUNDATION.apk
+          retention-days: 30
