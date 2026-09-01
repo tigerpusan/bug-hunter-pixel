@@ -49,11 +49,11 @@ jobs:
         run: flutter build apk --release
 
       - name: Rename APK
-        run: cp build/app/outputs/flutter-apk/app-release.apk BUG_HUNTER_V1.2.0_PIXEL_ART.apk
+        run: cp build/app/outputs/flutter-apk/app-release.apk BUG_HUNTER_V1.2.1_DIFFICULTY_TUNING.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: BUG_HUNTER_V1.2.0_PIXEL_ART-apk
-          path: BUG_HUNTER_V1.2.0_PIXEL_ART.apk
+          name: BUG_HUNTER_V1.2.1_DIFFICULTY_TUNING-apk
+          path: BUG_HUNTER_V1.2.1_DIFFICULTY_TUNING.apk
           retention-days: 30
