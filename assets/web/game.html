@@ -61,13 +61,14 @@ html,body{margin:0;height:100%;overflow:hidden;font-family:ui-monospace,"SFMono-
   <div id="overlay"><div class="card" id="ovCard"><div id="ovIcon">⭐</div><h2 id="ovTitle">박멸 성공!</h2><p id="ovText">다음 해충 떼가 감지되었습니다.</p><div class="actions"><button class="primary" id="retryBtn">다음 단계</button><button class="secondary" id="resetBtn">처음부터</button></div></div></div>
 </div>
 <script>
-// V1.2.1 DIFFICULTY TUNING: pixel-art gameplay preserved; fly difficulty curve softened.
-// Levels 1-5 keep the same base fly speed while only selected flies receive modest speed boosts.
-// Levels 6-10 raise difficulty on roughly 20-30% of flies instead of accelerating the entire swarm.
+// V1.3.0 ENDLESS MIX: V1.2.1 gameplay/visual tuning preserved.
+// Campaign: fly 10 -> mosquito 8 -> moth 8 -> mixed 15.
+// After campaign clear, endless random mixed waves continue without runaway speed scaling.
 const GAME_CONFIG={
-  stagesPerAct:10,
   maxVisiblePests:8,
   missLimit:3,
+  campaignStages:{fly:10,mosquito:8,moth:8,mixed:15},
+  endless:{minCount:4,maxCount:8,eliteRatio:.25,eliteSpeedMin:1.08,eliteSpeedMax:1.16,restEvery:5},
   playArea:{sidePadding:32,minTop:128,hudGap:26,bannerGap:20,maxHeightRatio:.60,weaponReserve:238,minHeight:80},
   weapon:{anchorX:'50%',bottom:-24,width:126,minAimDy:155,angleFactor:.42},
   pests:{
@@ -76,9 +77,13 @@ const GAME_CONFIG={
     moth:{sprite:'../game_art/pests/moth.png',spriteWidth:64,hitRadius:38}
   }
 };
-const ACTS=[{name:'파리',key:'fly',color:'#ff8d76'},{name:'모기',key:'mosquito',color:'#5bc8ff'},{name:'나방',key:'moth',color:'#ffd36f'},{name:'혼합',key:'mixed',color:'#69d77f'}];
-const STAGES_PER_ACT=GAME_CONFIG.stagesPerAct;
-const TOTAL_STAGES=ACTS.length*STAGES_PER_ACT;
+const ACTS=[
+  {name:'파리',key:'fly',color:'#ff8d76',stages:GAME_CONFIG.campaignStages.fly},
+  {name:'모기',key:'mosquito',color:'#5bc8ff',stages:GAME_CONFIG.campaignStages.mosquito},
+  {name:'나방',key:'moth',color:'#ffd36f',stages:GAME_CONFIG.campaignStages.moth},
+  {name:'혼합',key:'mixed',color:'#69d77f',stages:GAME_CONFIG.campaignStages.mixed}
+];
+const TOTAL_CAMPAIGN_STAGES=ACTS.reduce((sum,a)=>sum+a.stages,0);
 const SPRITES=Object.fromEntries(Object.entries(GAME_CONFIG.pests).map(([key,value])=>[key,value.sprite]));
 const game=document.getElementById('game');
 const hud=document.getElementById('hud');
@@ -109,21 +114,51 @@ function playWaveClear(){ ensureAudio(); ping(660,.06,'sine',.03,0); ping(880,.0
 function playFail(){ ensureAudio(); ping(200,.1,'sawtooth',.04,0); ping(160,.14,'triangle',.035,.05); }
 function bounds(){ return game.getBoundingClientRect(); }
 function playArea(){ const r=bounds(); const c=GAME_CONFIG.playArea; const hudBottom=hud.offsetTop+hud.offsetHeight; const top=Math.max(c.minTop,hudBottom+c.hudGap,banner.offsetTop+banner.offsetHeight+c.bannerGap); const bottom=Math.min(r.height*c.maxHeightRatio,r.height-c.weaponReserve); return {xMin:c.sidePadding,xMax:r.width-c.sidePadding,yMin:top,yMax:Math.max(top+c.minHeight,bottom)}; }
-function actOf(stage){ const idx=Math.floor((stage-1)/STAGES_PER_ACT); const level=((stage-1)%STAGES_PER_ACT)+1; return {act:ACTS[idx], index:idx, level}; }
-function stageCount(level){ return Math.min(GAME_CONFIG.maxVisiblePests, Math.max(1, level)); }
-function stageSeconds(level, actKey){ const base=level<=2?12:level<=5?15:level<=8?18:20; return actKey==='mixed'?base+2:base; }
+function actOf(stage){
+  let cursor=0;
+  for(let i=0;i<ACTS.length;i++){
+    const next=cursor+ACTS[i].stages;
+    if(stage<=next) return {act:ACTS[i],index:i,level:stage-cursor,endless:false};
+    cursor=next;
+  }
+  return {act:{name:'무한 혼합',key:'mixed',color:'#9ee493'},index:ACTS.length,level:stage-TOTAL_CAMPAIGN_STAGES,endless:true};
+}
+function stageCount(level, meta=null){
+  if(meta?.endless){
+    const e=GAME_CONFIG.endless;
+    if(level%e.restEvery===0) return 4+Math.floor(Math.random()*2); // periodic breather wave
+    return e.minCount+Math.floor(Math.random()*(e.maxCount-e.minCount+1));
+  }
+  return Math.min(GAME_CONFIG.maxVisiblePests, Math.max(1, level));
+}
+function stageSeconds(level, actKey, endless=false){
+  if(endless) return 22; // same late mixed-stage time; endless does not tighten the clock further
+  const base=level<=2?12:level<=5?15:level<=8?18:20;
+  return actKey==='mixed'?base+2:base;
+}
 function expectedNo(){ const alive=pests.filter(p=>p.alive).map(p=>p.no); return alive.length?Math.min(...alive):null; }
 function saveRecord(key,val){ localStorage.setItem(key,String(val)); }
 function getNum(key){ return Number(localStorage.getItem(key)||0); }
 function rememberProgress(){ if(score>getNum('pest_best_score')) saveRecord('pest_best_score',score); if(wave>getNum('pest_best_wave')) saveRecord('pest_best_wave',wave); }
 function recordKill(){ saveRecord('pest_total_kills', getNum('pest_total_kills')+1); }
-function updateHud(){ const {act,level}=actOf(wave); waveLabel.textContent=act.name+' '+level+'단계'; scoreEl.textContent=score; missDotsEl.textContent=[0,1,2].map(i=>i<misses?'●':'○').join(''); }
+function updateHud(){ const meta=actOf(wave); waveLabel.textContent=meta.endless?'무한 '+meta.level+'단계':meta.act.name+' '+meta.level+'단계'; scoreEl.textContent=score; missDotsEl.textContent=[0,1,2].map(i=>i<misses?'●':'○').join(''); }
 function showBanner(text){ banner.textContent=text; banner.animate([{transform:'translateX(-50%) scale(.84)',opacity:.2},{transform:'translateX(-50%) scale(1)',opacity:1}],{duration:220,fill:'forwards'}); }
 function setMessage(text){ messageEl.textContent=text; }
 function stopTimer(){ if(timerHandle){ clearInterval(timerHandle); timerHandle=null; } }
-function startTimer(){ stopTimer(); const meta=actOf(wave); const sec=stageSeconds(meta.level,meta.act.key); stageDeadline=performance.now()+sec*1000; timeLeftEl.textContent=sec.toFixed(1)+'s'; timerHandle=setInterval(()=>{ if(transitioning) return; const left=Math.max(0,(stageDeadline-performance.now())/1000); timeLeftEl.textContent=left.toFixed(1)+'s'; if(left<=0){ stopTimer(); failStage('시간 안에 해충을 정리하지 못했어요.'); } },100); }
+function startTimer(){ stopTimer(); const meta=actOf(wave); const sec=stageSeconds(meta.level,meta.act.key,meta.endless); stageDeadline=performance.now()+sec*1000; timeLeftEl.textContent=sec.toFixed(1)+'s'; timerHandle=setInterval(()=>{ if(transitioning) return; const left=Math.max(0,(stageDeadline-performance.now())/1000); timeLeftEl.textContent=left.toFixed(1)+'s'; if(left<=0){ stopTimer(); failStage('시간 안에 해충을 정리하지 못했어요.'); } },100); }
 function pestHtml(type,no){ return '<img class="sprite" src="'+SPRITES[type]+'" alt="'+type+'"><div class="no">'+no+'</div>'; }
-function createPestType(meta, idx){ if(meta.act.key!=='mixed') return meta.act.key; if(meta.level<=3) return idx%2===0?'fly':'mosquito'; if(meta.level<=6) return ['fly','mosquito','moth'][idx%3]; return ['mosquito','fly','moth'][Math.floor(Math.random()*3)]; }
+function createPestType(meta, idx){
+  if(meta.act.key!=='mixed') return meta.act.key;
+  if(meta.endless){
+    const pool=['fly','mosquito','moth'];
+    // Make every endless wave genuinely mixed: seed first three slots, then randomize the rest.
+    if(idx<3) return pool[(idx+meta.level)%3];
+    return pool[Math.floor(Math.random()*pool.length)];
+  }
+  if(meta.level<=3) return idx%2===0?'fly':'mosquito';
+  if(meta.level<=6) return ['fly','mosquito','moth'][idx%3];
+  return ['mosquito','fly','moth'][Math.floor(Math.random()*3)];
+}
 function motionProfile(type, level){
   if(type==='mosquito') return {speed:230+level*20, turn:5.2+level*0.23, wiggle:24+level*1.6, bob:10+level*0.5, jitter:56+level*3.2};
   if(type==='moth') return {speed:120+level*9, turn:2.1+level*0.06, wiggle:16+level*.6, bob:15+level*.7, jitter:12+level*.35};
@@ -153,13 +188,52 @@ function flyDifficulty(level, index, count){
   const mild=1.08 + ((index%3)*0.025);
   return {speed:mild, turn:1.035, wiggle:1.02};
 }
-function spawnStage(){ pests.forEach(p=>p.el.remove()); pests=[]; misses=0; overlay.style.display='none'; transitioning=false; running=true; updateHud(); const meta=actOf(wave); const count=stageCount(meta.level); const r=bounds(); const area=playArea(); for(let i=0;i<count;i++){ const type=createPestType(meta,i); const el=document.createElement('div'); el.className='pest '+type; el.style.width=GAME_CONFIG.pests[type].spriteWidth+'px'; el.innerHTML=pestHtml(type,i+1); game.appendChild(el); const prof=motionProfile(type, meta.level); const flyTune=type==='fly'?flyDifficulty(meta.level,i,count):{speed:1,turn:1,wiggle:1}; const speedVariance=type==='fly'?(0.97+Math.random()*0.06):(0.92+Math.random()*0.18); const angle=Math.random()*Math.PI*2; pests.push({el, alive:true, no:i+1, type, x:42+Math.random()*(r.width-84), y:area.yMin+Math.random()*(area.yMax-area.yMin), angle, targetAngle:angle, speed:prof.speed*flyTune.speed*speedVariance, turnRate:prof.turn*flyTune.turn, wiggle:prof.wiggle*flyTune.wiggle, bob:prof.bob, jitter:prof.jitter, phase:Math.random()*Math.PI*2, changeIn:type==='mosquito' ? (.10+Math.random()*.12) : (.30+Math.random()*.44)}); }
-  showBanner(meta.act.name+(count>1?' '+count+'마리 출현!':' 1마리 출현!')); setMessage('1번부터 맞히세요'); startTimer(); if(!sessionStarted){ sessionStarted=true; ensureAudio(); }}
+function endlessTune(meta,index,count,type){
+  if(!meta.endless) return {speed:1,turn:1,wiggle:1};
+  const e=GAME_CONFIG.endless;
+  if(meta.level%e.restEvery===0) return {speed:.96,turn:.97,wiggle:.98};
+  const eliteCount=Math.max(1,Math.round(count*e.eliteRatio));
+  const elite=index>=count-eliteCount;
+  if(!elite) return {speed:1,turn:1,wiggle:1};
+  const spread=(index-(count-eliteCount))/Math.max(1,eliteCount-1);
+  const speed=e.eliteSpeedMin+(e.eliteSpeedMax-e.eliteSpeedMin)*spread;
+  return {speed,turn:1.04+spread*.03,wiggle:1.02};
+}
+function spawnStage(){
+  pests.forEach(p=>p.el.remove()); pests=[]; misses=0; overlay.style.display='none'; transitioning=false; running=true; updateHud();
+  const meta=actOf(wave); const count=stageCount(meta.level,meta); const r=bounds(); const area=playArea();
+  for(let i=0;i<count;i++){
+    const type=createPestType(meta,i); const el=document.createElement('div'); el.className='pest '+type; el.style.width=GAME_CONFIG.pests[type].spriteWidth+'px'; el.innerHTML=pestHtml(type,i+1); game.appendChild(el);
+    const motionLevel=meta.endless?Math.min(10,6+((meta.level-1)%5)):Math.min(meta.level,10);
+    const prof=motionProfile(type,motionLevel);
+    const flyTune=type==='fly'?flyDifficulty(Math.min(meta.level,10),i,count):{speed:1,turn:1,wiggle:1};
+    const eTune=endlessTune(meta,i,count,type);
+    const speedVariance=type==='fly'?(0.97+Math.random()*0.06):(0.94+Math.random()*0.12);
+    const angle=Math.random()*Math.PI*2;
+    pests.push({el,alive:true,no:i+1,type,x:42+Math.random()*(r.width-84),y:area.yMin+Math.random()*(area.yMax-area.yMin),angle,targetAngle:angle,speed:prof.speed*flyTune.speed*eTune.speed*speedVariance,turnRate:prof.turn*flyTune.turn*eTune.turn,wiggle:prof.wiggle*flyTune.wiggle*eTune.wiggle,bob:prof.bob,jitter:prof.jitter,phase:Math.random()*Math.PI*2,changeIn:type==='mosquito'?(.10+Math.random()*.12):(.30+Math.random()*.44)});
+  }
+  const bannerText=meta.endless?'무한 혼합 '+meta.level+'단계 · '+count+'마리':meta.act.name+(count>1?' '+count+'마리 출현!':' 1마리 출현!');
+  showBanner(bannerText); setMessage(meta.endless?'랜덤 혼합 웨이브 · 1번부터 맞히세요':'1번부터 맞히세요'); startTimer(); if(!sessionStarted){ sessionStarted=true; ensureAudio(); }
+}
 function openResult(success,message){ transitioning=true; running=false; stopTimer(); overlay.style.display='flex'; if(success){ ovCard.classList.remove('fail'); ovIcon.textContent='⭐'; ovTitle.textContent='박멸 성공!'; ovText.textContent=message; retryBtn.textContent='다음 단계'; resetBtn.textContent='처음부터'; } else { ovCard.classList.add('fail'); ovIcon.textContent='💥'; ovTitle.textContent='GAME OVER'; ovText.textContent=message; retryBtn.textContent='다시 하기'; resetBtn.textContent='처음부터'; } }
-function nextStage(){ rememberProgress(); if(wave<TOTAL_STAGES){ wave++; spawnStage(); } else { playWaveClear(); openResult(true,'모든 해충을 박멸했습니다!'); } }
-function failStage(reason){ playFail(); rememberProgress(); const retryWave=Math.max(1,wave-2); overlay.dataset.retryWave=String(retryWave); openResult(false, reason+'\n게임이 끝났습니다.'); }
+function nextStage(){
+  rememberProgress();
+  if(wave===TOTAL_CAMPAIGN_STAGES){
+    wave++;
+    showBanner('전체 단계 완료! 무한 혼합 시작');
+    setTimeout(spawnStage,360);
+    return;
+  }
+  wave++;
+  spawnStage();
+}
+function failStage(reason){
+  playFail(); rememberProgress(); const meta=actOf(wave);
+  const retryWave=meta.endless?Math.max(TOTAL_CAMPAIGN_STAGES+1,wave-2):Math.max(1,wave-2);
+  overlay.dataset.retryWave=String(retryWave); openResult(false,reason+'\n게임이 끝났습니다.');
+}
 function fireFx(x,y,text,kind='hit'){ const flash=document.createElement('div'); flash.className='hitFx'; flash.style.left=x+'px'; flash.style.top=y+'px'; game.appendChild(flash); setTimeout(()=>flash.remove(),220); const t=document.createElement('div'); t.className='hitText'; t.style.left=x+'px'; t.style.top=y+'px'; t.textContent=text; game.appendChild(t); setTimeout(()=>t.remove(),560); rifle.classList.remove('kick','fire'); void rifle.offsetWidth; rifle.classList.add('kick','fire'); setTimeout(()=>rifle.classList.remove('fire'),130); if(kind==='hit') playHit(); else playMiss(); }
-function shoot(x,y){ ensureAudio(); playShot(); aimAt(x,y); if(transitioning||!running) return; const nearest=pests.filter(p=>p.alive).map(p=>({p,d:Math.hypot(p.x-x,p.y-y)})).sort((a,b)=>a.d-b.d)[0]; const hitRadius = nearest ? GAME_CONFIG.pests[nearest.p.type].hitRadius : GAME_CONFIG.pests.fly.hitRadius; if(nearest&&nearest.d<hitRadius){ const need=expectedNo(); if(nearest.p.no!==need){ misses++; updateHud(); setMessage(need+'번을 먼저 맞히세요'); fireFx(x,y,'MISS','miss'); if(misses>=GAME_CONFIG.missLimit) failStage('번호 순서를 놓쳤어요.'); return; } nearest.p.alive=false; nearest.p.el.remove(); score += 100 * actOf(wave).level + (actOf(wave).index*100); recordKill(); updateHud(); setMessage('다음 번호를 노리세요'); fireFx(nearest.p.x,nearest.p.y,'HIT!','hit'); if(pests.every(p=>!p.alive)){ playWaveClear(); setTimeout(nextStage,360); } } else { misses++; updateHud(); setMessage('MISS'); fireFx(x,y,'MISS','miss'); if(misses>=GAME_CONFIG.missLimit) failStage('MISS가 3회 누적되었어요.'); } }
+function shoot(x,y){ ensureAudio(); playShot(); aimAt(x,y); if(transitioning||!running) return; const nearest=pests.filter(p=>p.alive).map(p=>({p,d:Math.hypot(p.x-x,p.y-y)})).sort((a,b)=>a.d-b.d)[0]; const hitRadius = nearest ? GAME_CONFIG.pests[nearest.p.type].hitRadius : GAME_CONFIG.pests.fly.hitRadius; if(nearest&&nearest.d<hitRadius){ const need=expectedNo(); if(nearest.p.no!==need){ misses++; updateHud(); setMessage(need+'번을 먼저 맞히세요'); fireFx(x,y,'MISS','miss'); if(misses>=GAME_CONFIG.missLimit) failStage('번호 순서를 놓쳤어요.'); return; } nearest.p.alive=false; nearest.p.el.remove(); const scoreMeta=actOf(wave); const scoreLevel=scoreMeta.endless?10+Math.min(10,Math.floor((scoreMeta.level-1)/5)):scoreMeta.level; score += 100*scoreLevel+(scoreMeta.index*100); recordKill(); updateHud(); setMessage('다음 번호를 노리세요'); fireFx(nearest.p.x,nearest.p.y,'HIT!','hit'); if(pests.every(p=>!p.alive)){ playWaveClear(); setTimeout(nextStage,360); } } else { misses++; updateHud(); setMessage('MISS'); fireFx(x,y,'MISS','miss'); if(misses>=GAME_CONFIG.missLimit) failStage('MISS가 3회 누적되었어요.'); } }
 function aimAt(x,y){ const area=playArea(); x=Math.max(area.xMin,Math.min(area.xMax,x)); y=Math.max(area.yMin,Math.min(area.yMax,y)); cross.style.left=x+'px'; cross.style.top=y+'px'; const r=bounds(); const w=GAME_CONFIG.weapon; const dx=x-r.width/2; const dy=Math.max(w.minAimDy,r.height-y); const ang=(Math.atan2(dx,dy)*180/Math.PI)*w.angleFactor; rifle.style.setProperty('--ang',ang+'deg'); }
 function loop(now){ const dt=Math.min(.03,(now-last)/1000); last=now; if(running){ const area=playArea(); pests.filter(p=>p.alive).forEach(p=>{ p.phase += dt*(4.8 + p.turnRate*.65); p.changeIn -= dt; if(p.changeIn<=0){ p.targetAngle += (Math.random()*2-1)*(0.86 + p.turnRate*.16); p.changeIn = p.type==='mosquito' ? (0.07 + Math.random()*.11) : (0.20 + Math.random()*.34); }
       let diff=((p.targetAngle-p.angle+Math.PI*3)%(Math.PI*2))-Math.PI;
