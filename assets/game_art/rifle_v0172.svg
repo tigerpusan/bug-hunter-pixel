@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="520" viewBox="0 0 420 520">
+  <defs>
+    <linearGradient id="metal" x1="0" x2="1">
+      <stop offset="0" stop-color="#1c232b"/>
+      <stop offset="0.28" stop-color="#5b6878"/>
+      <stop offset="0.55" stop-color="#0f151b"/>
+      <stop offset="0.78" stop-color="#46515e"/>
+      <stop offset="1" stop-color="#11171d"/>
+    </linearGradient>
+    <linearGradient id="wood" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#c98a4f"/>
+      <stop offset="0.5" stop-color="#9f6636"/>
+      <stop offset="1" stop-color="#7d4f28"/>
+    </linearGradient>
+    <linearGradient id="darkWood" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#aa703d"/>
+      <stop offset="1" stop-color="#744826"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+  <g filter="url(#shadow)">
+    <!-- barrel group -->
+    <rect x="177" y="32" width="24" height="256" rx="11" fill="url(#metal)" stroke="#626f7e" stroke-width="4"/>
+    <rect x="203" y="32" width="24" height="256" rx="11" fill="url(#metal)" stroke="#626f7e" stroke-width="4"/>
+    <ellipse cx="189" cy="35" rx="18" ry="10" fill="#2e3741" stroke="#728091" stroke-width="4"/>
+    <ellipse cx="215" cy="35" rx="18" ry="10" fill="#2e3741" stroke="#728091" stroke-width="4"/>
+    <rect x="170" y="278" width="64" height="24" rx="8" fill="#26313d" stroke="#6b7786" stroke-width="4"/>
+    <rect x="159" y="300" width="86" height="48" rx="16" fill="#334051" stroke="#6b7786" stroke-width="5"/>
+    <!-- foregrip -->
+    <rect x="156" y="336" width="92" height="86" rx="24" fill="url(#wood)" stroke="#5c3515" stroke-width="6"/>
+    <path d="M181 354 v48 M202 352 v52 M223 354 v48" stroke="#8b5b30" stroke-width="5" stroke-linecap="round" opacity="0.9"/>
+    <!-- receiver -->
+    <rect x="172" y="422" width="60" height="68" rx="18" fill="#334051" stroke="#6b7786" stroke-width="5"/>
+    <!-- trigger guard -->
+    <path d="M187 456c8 22 26 28 46 2" fill="none" stroke="#1c232b" stroke-width="8" stroke-linecap="round"/>
+    <!-- stock -->
+    <path d="M171 446 L111 484 Q91 498 95 518 L225 518 Q246 503 256 474 L223 448 Z" fill="url(#darkWood)" stroke="#5c3515" stroke-width="6"/>
+    <rect x="162" y="440" width="80" height="28" rx="12" fill="#2a3542" opacity="0.95"/>
+  </g>
+</svg>

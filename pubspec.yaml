@@ -1,0 +1,25 @@
+name: bug_hunter_pixel
+description: BUG HUNTER PIXEL V1.1.0 PIXEL FOUNDATION
+publish_to: "none"
+version: 1.1.0+110
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+dependencies:
+  flutter:
+    sdk: flutter
+  webview_flutter: ^4.8.0
+  shared_preferences: ^2.3.2
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/web/game.html
+    - assets/icon/app_icon.png
+    - assets/game_art/
+    - assets/game_art/backgrounds/
+    - assets/game_art/pests/
+    - assets/game_art/weapons/
+    - assets/game_art/ui/
