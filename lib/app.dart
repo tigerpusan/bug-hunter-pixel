@@ -109,7 +109,7 @@ class HomeScreen extends StatelessWidget {
                         children: [
                           _RuleRow(
                             number: '1',
-                            text: '번호 순서대로 해충을 맞히세요.',
+                            text: '번호 순서대로 맞히세요.',
                           ),
                           SizedBox(height: 14),
                           Divider(height: 1, thickness: 2, color: Color(0xffd8c9aa)),
@@ -202,7 +202,7 @@ class _RuleRow extends StatelessWidget {
             text,
             style: const TextStyle(
               color: Color(0xff233747),
-              fontSize: 17,
+              fontSize: 16,
               fontWeight: FontWeight.w900,
               height: 1.35,
             ),
