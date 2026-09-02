@@ -14,6 +14,7 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> {
   static const _waveKey = 'pest_current_wave';
   static const _scoreKey = 'pest_current_score';
+  static const _bonusKey = 'pest_bonus_type';
 
   late final WebViewController controller;
 
@@ -22,9 +23,11 @@ class _GameScreenState extends State<GameScreen> {
       final data = jsonDecode(message) as Map<String, dynamic>;
       final wave = (data['wave'] as num?)?.toInt() ?? 1;
       final score = (data['score'] as num?)?.toInt() ?? 0;
+      final bonus = data['bonus'] is String ? data['bonus'] as String : '';
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(_waveKey, wave < 1 ? 1 : wave);
       await prefs.setInt(_scoreKey, score < 0 ? 0 : score);
+      await prefs.setString(_bonusKey, bonus);
     } catch (_) {
       // Ignore malformed messages; gameplay must never stop because saving failed.
     }
@@ -34,7 +37,8 @@ class _GameScreenState extends State<GameScreen> {
     final prefs = await SharedPreferences.getInstance();
     final wave = prefs.getInt(_waveKey) ?? 1;
     final score = prefs.getInt(_scoreKey) ?? 0;
-    final payload = jsonEncode({'wave': wave, 'score': score});
+    final bonus = prefs.getString(_bonusKey) ?? '';
+    final payload = jsonEncode({'wave': wave, 'score': score, 'bonus': bonus});
     await controller.runJavaScript('window.applyNativeProgress($payload);');
   }
 

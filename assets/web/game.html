@@ -61,7 +61,7 @@ html,body{margin:0;height:100%;overflow:hidden;font-family:ui-monospace,"SFMono-
   <div id="overlay"><div class="card" id="ovCard"><div id="ovIcon">⭐</div><h2 id="ovTitle">박멸 성공!</h2><p id="ovText">다음 해충 떼가 감지되었습니다.</p><div class="actions"><button class="primary" id="retryBtn">다음 단계</button><button class="secondary" id="resetBtn">처음부터</button></div></div></div>
 </div>
 <script>
-// V1.3.2 MEMORY SAVE: V1.3.1 gameplay/visual tuning preserved; current stage and score persist across app restarts.
+// V1.3.3 BONUS RUSH: memory save preserved; 60-second stress-relief bonus rush added after fly/mosquito/moth acts.
 // Campaign: fly 8 -> mosquito 8 -> moth 8 -> mixed 15.
 // After campaign clear, endless random mixed waves continue without runaway speed scaling.
 const GAME_CONFIG={
@@ -69,6 +69,7 @@ const GAME_CONFIG={
   missLimit:3,
   campaignStages:{fly:8,mosquito:8,moth:8,mixed:15},
   endless:{minCount:4,maxCount:8,eliteRatio:.25,eliteSpeedMin:1.08,eliteSpeedMax:1.16,restEvery:5},
+  bonus:{count:30,seconds:60,scorePerKill:50,speedScale:.72,turnScale:.78,wiggleScale:.84},
   playArea:{sidePadding:32,minTop:128,hudGap:26,bannerGap:20,maxHeightRatio:.60,weaponReserve:238,minHeight:80},
   weapon:{anchorX:'50%',bottom:-24,width:126,minAimDy:155,angleFactor:.42},
   pests:{
@@ -103,6 +104,7 @@ const messageEl=document.getElementById('message');
 const retryBtn=document.getElementById('retryBtn');
 const resetBtn=document.getElementById('resetBtn');
 let wave=1, score=0, misses=0, pests=[], transitioning=false, running=true, last=performance.now(), timerHandle=null, stageDeadline=0, sessionStarted=false;
+let bonusMode=false, bonusType='', bonusKilled=0;
 let audioCtx=null;
 function ensureAudio(){ if(!audioCtx){ const C=window.AudioContext||window.webkitAudioContext; if(C) audioCtx=new C(); } if(audioCtx && audioCtx.state==='suspended') audioCtx.resume(); }
 function ping(freq,dur,type='square',gain=.03,start=0){ if(!audioCtx) return; const t=audioCtx.currentTime+start; const o=audioCtx.createOscillator(); const g=audioCtx.createGain(); o.type=type; o.frequency.setValueAtTime(freq,t); g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(gain,t+.004); g.gain.exponentialRampToValueAtTime(.0001,t+dur); o.connect(g); g.connect(audioCtx.destination); o.start(t); o.stop(t+dur+.03); }
@@ -143,34 +145,38 @@ function stageSeconds(level, actKey, endless=false){
 function expectedNo(){ const alive=pests.filter(p=>p.alive).map(p=>p.no); return alive.length?Math.min(...alive):null; }
 function saveRecord(key,val){ localStorage.setItem(key,String(val)); }
 function getNum(key){ return Number(localStorage.getItem(key)||0); }
-const PROGRESS_KEYS={wave:'pest_current_wave',score:'pest_current_score'};
+const PROGRESS_KEYS={wave:'pest_current_wave',score:'pest_current_score',bonus:'pest_bonus_type'};
 function clampSavedWave(value){ const n=Math.floor(Number(value)||1); return Math.max(1,n); }
-function persistProgress(nextWave=wave,nextScore=score){
+function persistProgress(nextWave=wave,nextScore=score,nextBonus=bonusType){
   const safeWave=clampSavedWave(nextWave); const safeScore=Math.max(0,Math.floor(Number(nextScore)||0));
-  saveRecord(PROGRESS_KEYS.wave,safeWave); saveRecord(PROGRESS_KEYS.score,safeScore);
+  const safeBonus=['fly','mosquito','moth'].includes(nextBonus)?nextBonus:'';
+  saveRecord(PROGRESS_KEYS.wave,safeWave); saveRecord(PROGRESS_KEYS.score,safeScore); localStorage.setItem(PROGRESS_KEYS.bonus,safeBonus);
   if(window.GameSave&&GameSave.postMessage){
-    try{ GameSave.postMessage(JSON.stringify({wave:safeWave,score:safeScore})); }catch(_e){}
+    try{ GameSave.postMessage(JSON.stringify({wave:safeWave,score:safeScore,bonus:safeBonus})); }catch(_e){}
   }
 }
 function restoreLocalProgress(){
   wave=clampSavedWave(localStorage.getItem(PROGRESS_KEYS.wave)||1);
   score=Math.max(0,Math.floor(Number(localStorage.getItem(PROGRESS_KEYS.score)||0)));
+  const savedBonus=localStorage.getItem(PROGRESS_KEYS.bonus)||'';
+  bonusType=['fly','mosquito','moth'].includes(savedBonus)?savedBonus:''; bonusMode=!!bonusType;
 }
 function applyNativeProgress(data){
   if(!data) return;
   const nativeWave=clampSavedWave(data.wave||1); const nativeScore=Math.max(0,Math.floor(Number(data.score)||0));
-  if(nativeWave===wave && nativeScore===score) return;
-  wave=nativeWave; score=nativeScore; misses=0; transitioning=false; running=true;
-  stopTimer(); pests.forEach(p=>p.el.remove()); pests=[]; updateHud(); spawnStage();
+  const nativeBonus=['fly','mosquito','moth'].includes(data.bonus)?data.bonus:'';
+  if(nativeWave===wave && nativeScore===score && nativeBonus===bonusType) return;
+  wave=nativeWave; score=nativeScore; bonusType=nativeBonus; bonusMode=!!nativeBonus; bonusKilled=0; misses=0; transitioning=false; running=true;
+  stopTimer(); pests.forEach(p=>p.el.remove()); pests=[]; updateHud(); if(bonusMode) spawnBonus(); else spawnStage();
 }
 window.applyNativeProgress=applyNativeProgress;
 function rememberProgress(){ if(score>getNum('pest_best_score')) saveRecord('pest_best_score',score); if(wave>getNum('pest_best_wave')) saveRecord('pest_best_wave',wave); persistProgress(); }
 function recordKill(){ saveRecord('pest_total_kills', getNum('pest_total_kills')+1); }
-function updateHud(){ const meta=actOf(wave); waveLabel.textContent=meta.endless?'무한 '+meta.level+'단계':meta.act.name+' '+meta.level+'단계'; scoreEl.textContent=score; missDotsEl.textContent=[0,1,2].map(i=>i<misses?'●':'○').join(''); }
+function updateHud(){ if(bonusMode){ const name=ACTS.find(a=>a.key===bonusType)?.name||'보너스'; waveLabel.textContent=name+' BONUS'; scoreEl.textContent=score; missDotsEl.textContent=bonusKilled+'/'+GAME_CONFIG.bonus.count; return; } const meta=actOf(wave); waveLabel.textContent=meta.endless?'무한 '+meta.level+'단계':meta.act.name+' '+meta.level+'단계'; scoreEl.textContent=score; missDotsEl.textContent=[0,1,2].map(i=>i<misses?'●':'○').join(''); }
 function showBanner(text){ banner.textContent=text; banner.animate([{transform:'translateX(-50%) scale(.84)',opacity:.2},{transform:'translateX(-50%) scale(1)',opacity:1}],{duration:220,fill:'forwards'}); }
 function setMessage(text){ messageEl.textContent=text; }
 function stopTimer(){ if(timerHandle){ clearInterval(timerHandle); timerHandle=null; } }
-function startTimer(){ stopTimer(); const meta=actOf(wave); const sec=stageSeconds(meta.level,meta.act.key,meta.endless); stageDeadline=performance.now()+sec*1000; timeLeftEl.textContent=sec.toFixed(1)+'s'; timerHandle=setInterval(()=>{ if(transitioning) return; const left=Math.max(0,(stageDeadline-performance.now())/1000); timeLeftEl.textContent=left.toFixed(1)+'s'; if(left<=0){ stopTimer(); failStage('시간 안에 해충을 정리하지 못했어요.'); } },100); }
+function startTimer(){ stopTimer(); if(bonusMode){ const sec=GAME_CONFIG.bonus.seconds; stageDeadline=performance.now()+sec*1000; timeLeftEl.textContent=sec.toFixed(1)+'s'; timerHandle=setInterval(()=>{ const left=Math.max(0,(stageDeadline-performance.now())/1000); timeLeftEl.textContent=left.toFixed(1)+'s'; if(left<=0){ stopTimer(); finishBonus(); } },100); return; } const meta=actOf(wave); const sec=stageSeconds(meta.level,meta.act.key,meta.endless); stageDeadline=performance.now()+sec*1000; timeLeftEl.textContent=sec.toFixed(1)+'s'; timerHandle=setInterval(()=>{ if(transitioning) return; const left=Math.max(0,(stageDeadline-performance.now())/1000); timeLeftEl.textContent=left.toFixed(1)+'s'; if(left<=0){ stopTimer(); failStage('시간 안에 해충을 정리하지 못했어요.'); } },100); }
 function pestHtml(type,no){ return '<img class="sprite" src="'+SPRITES[type]+'" alt="'+type+'"><div class="no">'+no+'</div>'; }
 function createPestType(meta, idx){
   if(meta.act.key!=='mixed') return meta.act.key;
@@ -186,7 +192,7 @@ function createPestType(meta, idx){
 }
 function motionProfile(type, level){
   // Mosquito remains agile but no longer jumps to an extreme speed by stage 8.
-  if(type==='mosquito') return {speed:205+level*11, turn:4.55+level*0.15, wiggle:21+level*1.1, bob:9+level*0.4, jitter:42+level*2.2};
+  if(type==='mosquito') return {speed:178+level*9, turn:4.00+level*0.12, wiggle:18+level*.9, bob:8+level*0.35, jitter:33+level*1.6};
   // Moth is the large, readable target: slower translation with a broad floating motion.
   if(type==='moth') return {speed:112+level*7, turn:1.95+level*0.05, wiggle:15+level*.5, bob:16+level*.65, jitter:10+level*.3};
   // Fly base movement stays deliberately stable. Per-fly difficulty is layered in flyDifficulty().
@@ -242,17 +248,27 @@ function spawnStage(){
   const bannerText=meta.endless?'무한 혼합 '+meta.level+'단계 · '+count+'마리':meta.act.name+(count>1?' '+count+'마리 출현!':' 1마리 출현!');
   showBanner(bannerText); setMessage(meta.endless?'랜덤 혼합 웨이브 · 1번부터 맞히세요':'1번부터 맞히세요'); startTimer(); if(!sessionStarted){ sessionStarted=true; ensureAudio(); }
 }
+function spawnBonus(){
+  pests.forEach(p=>p.el.remove()); pests=[]; misses=0; transitioning=false; running=true; bonusMode=true; bonusKilled=0;
+  const cfg=GAME_CONFIG.bonus; const type=bonusType||'fly'; const r=bounds(); const area=playArea(); const baseLevel=type==='mosquito'?5:4; const prof=motionProfile(type,baseLevel);
+  for(let i=0;i<cfg.count;i++){
+    const el=document.createElement('div'); el.className='pest '+type; el.style.width=Math.max(42,GAME_CONFIG.pests[type].spriteWidth-6)+'px'; el.innerHTML='<img class="sprite" src="'+SPRITES[type]+'" alt="'+type+'">'; game.appendChild(el);
+    const angle=Math.random()*Math.PI*2; const speedVar=.88+Math.random()*.20;
+    pests.push({el,alive:true,no:i+1,type,x:38+Math.random()*(r.width-76),y:area.yMin+Math.random()*(area.yMax-area.yMin),angle,targetAngle:angle,speed:prof.speed*cfg.speedScale*speedVar,turnRate:prof.turn*cfg.turnScale,wiggle:prof.wiggle*cfg.wiggleScale,bob:prof.bob,jitter:prof.jitter*.6,phase:Math.random()*Math.PI*2,changeIn:type==='mosquito'?(.15+Math.random()*.20):(.34+Math.random()*.40)});
+  }
+  updateHud(); persistProgress(wave,score,type); showBanner('BONUS RUSH · '+cfg.count+'마리!'); setMessage('60초 자유사격! 순서·MISS 없이 보이는 대로 잡으세요'); startTimer();
+}
+function startBonus(type){ bonusType=type; bonusMode=true; bonusKilled=0; persistProgress(wave,score,type); spawnBonus(); }
+function finishBonus(){
+  if(!bonusMode) return; const cleared=bonusKilled; const type=bonusType; bonusMode=false; bonusType=''; pests.forEach(p=>p.el.remove()); pests=[]; wave++; persistProgress(wave,score,''); updateHud();
+  const next=actOf(wave); showBanner('BONUS '+cleared+'마리 박멸!'); setMessage('스트레스 해소 완료 · '+next.act.name+' 단계로 이동'); setTimeout(spawnStage,700);
+}
 function openResult(success,message){ transitioning=true; running=false; stopTimer(); overlay.style.display='flex'; if(success){ ovCard.classList.remove('fail'); ovIcon.textContent='⭐'; ovTitle.textContent='박멸 성공!'; ovText.textContent=message; retryBtn.textContent='다음 단계'; resetBtn.textContent='처음부터'; } else { ovCard.classList.add('fail'); ovIcon.textContent='💥'; ovTitle.textContent='GAME OVER'; ovText.textContent=message; retryBtn.textContent='다시 하기'; resetBtn.textContent='처음부터'; } }
 function nextStage(){
-  rememberProgress();
-  if(wave===TOTAL_CAMPAIGN_STAGES){
-    wave++;
-    showBanner('전체 단계 완료! 무한 혼합 시작');
-    setTimeout(spawnStage,360);
-    return;
-  }
-  wave++;
-  spawnStage();
+  rememberProgress(); const meta=actOf(wave);
+  if(!meta.endless && meta.act.key!=='mixed' && meta.level===meta.act.stages){ startBonus(meta.act.key); return; }
+  if(wave===TOTAL_CAMPAIGN_STAGES){ wave++; persistProgress(); showBanner('전체 단계 완료! 무한 혼합 시작'); setTimeout(spawnStage,360); return; }
+  wave++; persistProgress(); spawnStage();
 }
 function failStage(reason){
   playFail(); rememberProgress(); const meta=actOf(wave);
@@ -261,7 +277,9 @@ function failStage(reason){
   overlay.dataset.retryWave=String(retryWave); openResult(false,reason+'\n게임이 끝났습니다.');
 }
 function fireFx(x,y,text,kind='hit'){ const flash=document.createElement('div'); flash.className='hitFx'; flash.style.left=x+'px'; flash.style.top=y+'px'; game.appendChild(flash); setTimeout(()=>flash.remove(),220); const t=document.createElement('div'); t.className='hitText'; t.style.left=x+'px'; t.style.top=y+'px'; t.textContent=text; game.appendChild(t); setTimeout(()=>t.remove(),560); rifle.classList.remove('kick','fire'); void rifle.offsetWidth; rifle.classList.add('kick','fire'); setTimeout(()=>rifle.classList.remove('fire'),130); if(kind==='hit') playHit(); else playMiss(); }
-function shoot(x,y){ ensureAudio(); playShot(); aimAt(x,y); if(transitioning||!running) return; const nearest=pests.filter(p=>p.alive).map(p=>({p,d:Math.hypot(p.x-x,p.y-y)})).sort((a,b)=>a.d-b.d)[0]; const hitRadius = nearest ? GAME_CONFIG.pests[nearest.p.type].hitRadius : GAME_CONFIG.pests.fly.hitRadius; if(nearest&&nearest.d<hitRadius){ const need=expectedNo(); if(nearest.p.no!==need){ misses++; updateHud(); setMessage(need+'번을 먼저 맞히세요'); fireFx(x,y,'MISS','miss'); if(misses>=GAME_CONFIG.missLimit) failStage('번호 순서를 놓쳤어요.'); return; } nearest.p.alive=false; nearest.p.el.remove(); const scoreMeta=actOf(wave); const scoreLevel=scoreMeta.endless?10+Math.min(10,Math.floor((scoreMeta.level-1)/5)):scoreMeta.level; score += 100*scoreLevel+(scoreMeta.index*100); recordKill(); updateHud(); setMessage('다음 번호를 노리세요'); fireFx(nearest.p.x,nearest.p.y,'HIT!','hit'); if(pests.every(p=>!p.alive)){ playWaveClear(); setTimeout(nextStage,360); } } else { misses++; updateHud(); setMessage('MISS'); fireFx(x,y,'MISS','miss'); if(misses>=GAME_CONFIG.missLimit) failStage('MISS가 3회 누적되었어요.'); } }
+function shoot(x,y){ ensureAudio(); playShot(); aimAt(x,y); if(transitioning||!running) return; const nearest=pests.filter(p=>p.alive).map(p=>({p,d:Math.hypot(p.x-x,p.y-y)})).sort((a,b)=>a.d-b.d)[0]; const hitRadius=nearest?GAME_CONFIG.pests[nearest.p.type].hitRadius:GAME_CONFIG.pests.fly.hitRadius;
+  if(bonusMode){ if(nearest&&nearest.d<hitRadius){ nearest.p.alive=false; nearest.p.el.remove(); bonusKilled++; score+=GAME_CONFIG.bonus.scorePerKill; recordKill(); updateHud(); fireFx(nearest.p.x,nearest.p.y,'POP!','hit'); if(bonusKilled>=GAME_CONFIG.bonus.count){ playWaveClear(); stopTimer(); setTimeout(finishBonus,350); } } else { fireFx(x,y,'','miss'); } return; }
+  if(nearest&&nearest.d<hitRadius){ const need=expectedNo(); if(nearest.p.no!==need){ misses++; updateHud(); setMessage(need+'번을 먼저 맞히세요'); fireFx(x,y,'MISS','miss'); if(misses>=GAME_CONFIG.missLimit) failStage('번호 순서를 놓쳤어요.'); return; } nearest.p.alive=false; nearest.p.el.remove(); const scoreMeta=actOf(wave); const scoreLevel=scoreMeta.endless?10+Math.min(10,Math.floor((scoreMeta.level-1)/5)):scoreMeta.level; score += 100*scoreLevel+(scoreMeta.index*100); recordKill(); updateHud(); setMessage('다음 번호를 노리세요'); fireFx(nearest.p.x,nearest.p.y,'HIT!','hit'); if(pests.every(p=>!p.alive)){ playWaveClear(); setTimeout(nextStage,360); } } else { misses++; updateHud(); setMessage('MISS'); fireFx(x,y,'MISS','miss'); if(misses>=GAME_CONFIG.missLimit) failStage('MISS가 3회 누적되었어요.'); } }
 function aimAt(x,y){ const area=playArea(); x=Math.max(area.xMin,Math.min(area.xMax,x)); y=Math.max(area.yMin,Math.min(area.yMax,y)); cross.style.left=x+'px'; cross.style.top=y+'px'; const r=bounds(); const w=GAME_CONFIG.weapon; const dx=x-r.width/2; const dy=Math.max(w.minAimDy,r.height-y); const ang=(Math.atan2(dx,dy)*180/Math.PI)*w.angleFactor; rifle.style.setProperty('--ang',ang+'deg'); }
 function loop(now){ const dt=Math.min(.03,(now-last)/1000); last=now; if(running){ const area=playArea(); pests.filter(p=>p.alive).forEach(p=>{ p.phase += dt*(4.8 + p.turnRate*.65); p.changeIn -= dt; if(p.changeIn<=0){ p.targetAngle += (Math.random()*2-1)*(0.86 + p.turnRate*.16); p.changeIn = p.type==='mosquito' ? (0.07 + Math.random()*.11) : (0.20 + Math.random()*.34); }
       let diff=((p.targetAngle-p.angle+Math.PI*3)%(Math.PI*2))-Math.PI;
@@ -283,10 +301,10 @@ function loop(now){ const dt=Math.min(.03,(now-last)/1000); last=now; if(running
 game.addEventListener('pointermove',e=>{ const r=bounds(); aimAt(e.clientX-r.left,e.clientY-r.top); });
 game.addEventListener('pointerdown',e=>{ if(e.target.closest('#overlay')) return; const r=bounds(); shoot(e.clientX-r.left,e.clientY-r.top); });
 retryBtn.addEventListener('click',()=>{ ensureAudio(); if(retryBtn.textContent==='다음 단계'){ overlay.style.display='none'; transitioning=false; running=true; persistProgress(); spawnStage(); } else { wave=Number(overlay.dataset.retryWave||wave); persistProgress(); spawnStage(); } });
-resetBtn.addEventListener('click',()=>{ ensureAudio(); wave=1; score=0; misses=0; sessionStarted=false; persistProgress(1,0); updateHud(); spawnStage(); });
+resetBtn.addEventListener('click',()=>{ ensureAudio(); wave=1; score=0; misses=0; bonusMode=false; bonusType=''; bonusKilled=0; sessionStarted=false; persistProgress(1,0,''); updateHud(); spawnStage(); });
 const weaponCfg=GAME_CONFIG.weapon; rifle.style.setProperty('--weapon-x',weaponCfg.anchorX); rifle.style.setProperty('--weapon-bottom',weaponCfg.bottom+'px'); rifle.style.setProperty('--weapon-width',weaponCfg.width+'px');
 restoreLocalProgress();
-const r=bounds(); aimAt(r.width/2,r.height*0.50); updateHud(); spawnStage(); requestAnimationFrame(loop);
+const r=bounds(); aimAt(r.width/2,r.height*0.50); updateHud(); if(bonusMode) spawnBonus(); else spawnStage(); requestAnimationFrame(loop);
 </script>
 </body>
 </html>

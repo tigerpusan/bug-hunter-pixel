@@ -1,7 +1,7 @@
 name: bug_hunter_pixel
-description: BUG HUNTER V1.3.2 MEMORY SAVE
+description: BUG HUNTER V1.3.3 BONUS RUSH
 publish_to: "none"
-version: 1.3.2+132
+version: 1.3.3+133
 environment:
   sdk: ">=3.3.0 <4.0.0"
 dependencies:
