@@ -1,7 +1,7 @@
 name: bug_hunter_pixel
-description: BUG HUNTER V1.3.1 FLOW SPRITE FIX
+description: BUG HUNTER V1.3.2 MEMORY SAVE
 publish_to: "none"
-version: 1.3.1+131
+version: 1.3.2+132
 environment:
   sdk: ">=3.3.0 <4.0.0"
 dependencies:

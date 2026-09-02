@@ -61,7 +61,7 @@ html,body{margin:0;height:100%;overflow:hidden;font-family:ui-monospace,"SFMono-
   <div id="overlay"><div class="card" id="ovCard"><div id="ovIcon">⭐</div><h2 id="ovTitle">박멸 성공!</h2><p id="ovText">다음 해충 떼가 감지되었습니다.</p><div class="actions"><button class="primary" id="retryBtn">다음 단계</button><button class="secondary" id="resetBtn">처음부터</button></div></div></div>
 </div>
 <script>
-// V1.3.1 FLOW & SPRITE FIX: V1.2.1 gameplay/visual tuning preserved.
+// V1.3.2 MEMORY SAVE: V1.3.1 gameplay/visual tuning preserved; current stage and score persist across app restarts.
 // Campaign: fly 8 -> mosquito 8 -> moth 8 -> mixed 15.
 // After campaign clear, endless random mixed waves continue without runaway speed scaling.
 const GAME_CONFIG={
@@ -143,7 +143,28 @@ function stageSeconds(level, actKey, endless=false){
 function expectedNo(){ const alive=pests.filter(p=>p.alive).map(p=>p.no); return alive.length?Math.min(...alive):null; }
 function saveRecord(key,val){ localStorage.setItem(key,String(val)); }
 function getNum(key){ return Number(localStorage.getItem(key)||0); }
-function rememberProgress(){ if(score>getNum('pest_best_score')) saveRecord('pest_best_score',score); if(wave>getNum('pest_best_wave')) saveRecord('pest_best_wave',wave); }
+const PROGRESS_KEYS={wave:'pest_current_wave',score:'pest_current_score'};
+function clampSavedWave(value){ const n=Math.floor(Number(value)||1); return Math.max(1,n); }
+function persistProgress(nextWave=wave,nextScore=score){
+  const safeWave=clampSavedWave(nextWave); const safeScore=Math.max(0,Math.floor(Number(nextScore)||0));
+  saveRecord(PROGRESS_KEYS.wave,safeWave); saveRecord(PROGRESS_KEYS.score,safeScore);
+  if(window.GameSave&&GameSave.postMessage){
+    try{ GameSave.postMessage(JSON.stringify({wave:safeWave,score:safeScore})); }catch(_e){}
+  }
+}
+function restoreLocalProgress(){
+  wave=clampSavedWave(localStorage.getItem(PROGRESS_KEYS.wave)||1);
+  score=Math.max(0,Math.floor(Number(localStorage.getItem(PROGRESS_KEYS.score)||0)));
+}
+function applyNativeProgress(data){
+  if(!data) return;
+  const nativeWave=clampSavedWave(data.wave||1); const nativeScore=Math.max(0,Math.floor(Number(data.score)||0));
+  if(nativeWave===wave && nativeScore===score) return;
+  wave=nativeWave; score=nativeScore; misses=0; transitioning=false; running=true;
+  stopTimer(); pests.forEach(p=>p.el.remove()); pests=[]; updateHud(); spawnStage();
+}
+window.applyNativeProgress=applyNativeProgress;
+function rememberProgress(){ if(score>getNum('pest_best_score')) saveRecord('pest_best_score',score); if(wave>getNum('pest_best_wave')) saveRecord('pest_best_wave',wave); persistProgress(); }
 function recordKill(){ saveRecord('pest_total_kills', getNum('pest_total_kills')+1); }
 function updateHud(){ const meta=actOf(wave); waveLabel.textContent=meta.endless?'무한 '+meta.level+'단계':meta.act.name+' '+meta.level+'단계'; scoreEl.textContent=score; missDotsEl.textContent=[0,1,2].map(i=>i<misses?'●':'○').join(''); }
 function showBanner(text){ banner.textContent=text; banner.animate([{transform:'translateX(-50%) scale(.84)',opacity:.2},{transform:'translateX(-50%) scale(1)',opacity:1}],{duration:220,fill:'forwards'}); }
@@ -206,7 +227,7 @@ function endlessTune(meta,index,count,type){
   return {speed,turn:1.04+spread*.03,wiggle:1.02};
 }
 function spawnStage(){
-  pests.forEach(p=>p.el.remove()); pests=[]; misses=0; overlay.style.display='none'; transitioning=false; running=true; updateHud();
+  pests.forEach(p=>p.el.remove()); pests=[]; misses=0; overlay.style.display='none'; transitioning=false; running=true; updateHud(); persistProgress();
   const meta=actOf(wave); const count=stageCount(meta.level,meta); const r=bounds(); const area=playArea();
   for(let i=0;i<count;i++){
     const type=createPestType(meta,i); const el=document.createElement('div'); el.className='pest '+type; el.style.width=GAME_CONFIG.pests[type].spriteWidth+'px'; el.innerHTML=pestHtml(type,i+1); game.appendChild(el);
@@ -236,6 +257,7 @@ function nextStage(){
 function failStage(reason){
   playFail(); rememberProgress(); const meta=actOf(wave);
   const retryWave=meta.endless?Math.max(TOTAL_CAMPAIGN_STAGES+1,wave-2):Math.max(1,wave-2);
+  persistProgress(retryWave,score);
   overlay.dataset.retryWave=String(retryWave); openResult(false,reason+'\n게임이 끝났습니다.');
 }
 function fireFx(x,y,text,kind='hit'){ const flash=document.createElement('div'); flash.className='hitFx'; flash.style.left=x+'px'; flash.style.top=y+'px'; game.appendChild(flash); setTimeout(()=>flash.remove(),220); const t=document.createElement('div'); t.className='hitText'; t.style.left=x+'px'; t.style.top=y+'px'; t.textContent=text; game.appendChild(t); setTimeout(()=>t.remove(),560); rifle.classList.remove('kick','fire'); void rifle.offsetWidth; rifle.classList.add('kick','fire'); setTimeout(()=>rifle.classList.remove('fire'),130); if(kind==='hit') playHit(); else playMiss(); }
@@ -260,9 +282,10 @@ function loop(now){ const dt=Math.min(.03,(now-last)/1000); last=now; if(running
 }
 game.addEventListener('pointermove',e=>{ const r=bounds(); aimAt(e.clientX-r.left,e.clientY-r.top); });
 game.addEventListener('pointerdown',e=>{ if(e.target.closest('#overlay')) return; const r=bounds(); shoot(e.clientX-r.left,e.clientY-r.top); });
-retryBtn.addEventListener('click',()=>{ ensureAudio(); if(retryBtn.textContent==='다음 단계'){ overlay.style.display='none'; transitioning=false; running=true; spawnStage(); } else { wave=Number(overlay.dataset.retryWave||wave); spawnStage(); } });
-resetBtn.addEventListener('click',()=>{ ensureAudio(); wave=1; score=0; misses=0; sessionStarted=false; updateHud(); spawnStage(); });
+retryBtn.addEventListener('click',()=>{ ensureAudio(); if(retryBtn.textContent==='다음 단계'){ overlay.style.display='none'; transitioning=false; running=true; persistProgress(); spawnStage(); } else { wave=Number(overlay.dataset.retryWave||wave); persistProgress(); spawnStage(); } });
+resetBtn.addEventListener('click',()=>{ ensureAudio(); wave=1; score=0; misses=0; sessionStarted=false; persistProgress(1,0); updateHud(); spawnStage(); });
 const weaponCfg=GAME_CONFIG.weapon; rifle.style.setProperty('--weapon-x',weaponCfg.anchorX); rifle.style.setProperty('--weapon-bottom',weaponCfg.bottom+'px'); rifle.style.setProperty('--weapon-width',weaponCfg.width+'px');
+restoreLocalProgress();
 const r=bounds(); aimAt(r.width/2,r.height*0.50); updateHud(); spawnStage(); requestAnimationFrame(loop);
 </script>
 </body>
