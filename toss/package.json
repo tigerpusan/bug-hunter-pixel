@@ -1,0 +1,19 @@
+{
+  "name": "bug-hunter-toss",
+  "private": true,
+  "version": "1.3.3",
+  "type": "module",
+  "scripts": {
+    "sync": "node scripts/sync-game.mjs",
+    "dev:web": "npm run sync && vite --host 0.0.0.0",
+    "build:web": "npm run sync && vite build",
+    "build:toss": "ait build"
+  },
+  "dependencies": {
+    "@apps-in-toss/web-framework": "2.4.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2",
+    "vite": "^6.1.0"
+  }
+}
