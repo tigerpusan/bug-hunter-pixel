@@ -24,7 +24,13 @@ jobs:
           cache: true
 
       - name: Create isolated Android project
-        run: flutter create . --platforms=android --org com.bughunterpixel --project-name bug_hunter_pixel
+        run: flutter create . --platforms=android --org com.pinetreelabs --project-name bug_hunter_pixel
+
+      - name: Lock Play package id
+        run: |
+          sed -i 's/com.pinetreelabs.bug_hunter_pixel/com.pinetreelabs.bughunter/g' android/app/build.gradle.kts
+          grep -q 'applicationId = "com.pinetreelabs.bughunter"' android/app/build.gradle.kts
+          grep -q 'namespace = "com.pinetreelabs.bughunter"' android/app/build.gradle.kts
 
       - name: Apply app name and icons
         run: |
