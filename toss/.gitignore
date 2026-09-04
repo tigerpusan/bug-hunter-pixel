@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.ait/
+*.ait
+index.html
+public/game_art/
