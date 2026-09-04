@@ -1,0 +1,51 @@
+name: Build Toss Mini App
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'toss/**'
+    paths:
+      - 'toss/**'
+      - 'assets/web/**'
+      - 'assets/game_art/**'
+      - '.github/workflows/build-toss.yml'
+
+jobs:
+  build-toss:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: toss
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: toss/package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build web bundle
+        run: npm run build:web
+
+      - name: Build Apps in Toss package
+        run: npm run build:toss
+
+      - name: Upload Toss build output
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bug-hunter-toss-build
+          path: |
+            toss/dist/**
+            toss/**/*.ait
+          if-no-files-found: warn
+          retention-days: 14
