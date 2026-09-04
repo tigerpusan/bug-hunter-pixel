@@ -27,8 +27,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: toss/package-lock.json
 
       - name: Install dependencies
         run: npm install
@@ -46,6 +44,6 @@ jobs:
           name: bug-hunter-toss-build
           path: |
             toss/dist/**
-            toss/**/*.ait
+            toss/*.ait
           if-no-files-found: warn
           retention-days: 14
