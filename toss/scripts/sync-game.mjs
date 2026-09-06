@@ -25,6 +25,9 @@ const tossHeadPatch = `
     right: calc(64px + var(--toss-safe-right));
     left: calc(8px + var(--toss-safe-left));
   }
+  #banner {
+    top: calc(80px + var(--toss-safe-top));
+  }
   #tossSoundToggle {
     position: fixed;
     left: calc(10px + var(--toss-safe-left));
