@@ -1,6 +1,8 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -33,6 +35,11 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
+  Future<void> _loadV134Patch() async {
+    final patch = await rootBundle.loadString('assets/web/v1_3_4_rage_revenge.js');
+    await controller.runJavaScript(patch);
+  }
+
   Future<void> _restoreNativeProgress() async {
     final prefs = await SharedPreferences.getInstance();
     final wave = prefs.getInt(_waveKey) ?? 1;
@@ -62,10 +69,23 @@ class _GameScreenState extends State<GameScreen> {
           _saveProgress(m.message);
         },
       )
+      ..addJavaScriptChannel(
+        'RewardAd',
+        onMessageReceived: (m) async {
+          // Standalone APK bridge: debug builds simulate a completed rewarded ad
+          // so the revenge flow can be tested. Release builds never grant a
+          // reward here; Apps in Toss uses its own rewarded-ad SDK bridge.
+          final granted = kDebugMode;
+          await controller.runJavaScript(
+            'window.applyRewardAdResult(${granted ? 'true' : 'false'});',
+          );
+        },
+      )
       ..setNavigationDelegate(
         NavigationDelegate(
-          onPageFinished: (_) {
-            _restoreNativeProgress();
+          onPageFinished: (_) async {
+            await _loadV134Patch();
+            await _restoreNativeProgress();
           },
         ),
       )
