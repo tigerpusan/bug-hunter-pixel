@@ -82,7 +82,7 @@ class HomeScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     const Text(
-                      '짜증날 때 하는 더 짜증나는 게임',
+                      '짜증날때 더 짜증나는 게임',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 18,
