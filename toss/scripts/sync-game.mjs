@@ -8,6 +8,7 @@ const repoRoot = resolve(tossRoot, '..');
 
 const sourceHtml = resolve(repoRoot, 'assets/web/game.html');
 const sourceArt = resolve(repoRoot, 'assets/game_art');
+const rageRuntimeFile = resolve(tossRoot, 'scripts/rage-revenge-runtime.js');
 const targetHtml = resolve(tossRoot, 'index.html');
 const targetPublic = resolve(tossRoot, 'public');
 const targetArt = resolve(targetPublic, 'game_art');
@@ -117,10 +118,13 @@ await mkdir(targetPublic, { recursive: true });
 await rm(targetArt, { recursive: true, force: true });
 
 let html = await readFile(sourceHtml, 'utf8');
+const rageRuntime = await readFile(rageRuntimeFile, 'utf8');
 html = html.replace('</head>', `${tossHeadPatch}\n</head>`);
-html = html.replace('</body>', `${tossBodyPatch}\n</body>`);
+const adBridgeTag = `<script type="module" src="/src/ad-bridge.js"></script>`;
+const rageRuntimeTag = `<script id="rage-revenge-runtime">\n${rageRuntime}\n</script>`;
+html = html.replace('</body>', `${tossBodyPatch}\n${adBridgeTag}\n${rageRuntimeTag}\n</body>`);
 await writeFile(targetHtml, html, 'utf8');
 
 await cp(sourceArt, targetArt, { recursive: true });
 
-console.log('Synced canonical Bug Hunter game into toss/ with Toss compatibility layer');
+console.log('Synced BUG HUNTER V1.3.4 into toss/ with Safe Area + rewarded revenge runtime');
