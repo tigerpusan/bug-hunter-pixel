@@ -1,7 +1,7 @@
 {
   "name": "bug-hunter-toss",
   "private": true,
-  "version": "1.3.3",
+  "version": "1.3.4",
   "type": "module",
   "scripts": {
     "sync": "node scripts/sync-game.mjs",
@@ -10,7 +10,7 @@
     "build:toss": "ait build"
   },
   "dependencies": {
-    "@apps-in-toss/web-framework": "2.4.1"
+    "@apps-in-toss/web-framework": "3.8.1"
   },
   "devDependencies": {
     "typescript": "^5.9.2",
